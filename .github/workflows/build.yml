@@ -21,11 +21,11 @@ jobs:
           git clone --depth=1 --branch release/23.x \
             https://github.com/llvm/llvm-project.git
 
-      - name: Apply СЯзык patches
-        run: |
-          chmod +x patches/apply.sh
-          cd llvm-project
-          ../patches/apply.sh .
+- name: Apply СЯзык patch
+  run: |
+    cd llvm-project
+    patch -p1 < ../СЯзык-patch.diff
+
 
       - name: Build native tblgen tools (x86_64)
         run: |
