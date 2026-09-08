@@ -21,11 +21,17 @@ jobs:
           git clone --depth=1 --branch release/23.x \
             https://github.com/llvm/llvm-project.git
 
-      - name: Apply СЯзык patch  # Исправлен отступ
-        run: |  # Добавлен правильный отступ
-          chmod +x apply_sclang.sh
-          cd llvm-project
-          ../apply_sclang.sh
+- name: Apply СЯзык patch
+  run: |
+    # Проверяем наличие скрипта
+    if [ -f .github/patches/apply_sclang.sh ]; then
+      chmod +x .github/patches/apply_sclang.sh
+      cd llvm-project
+      ../.github/patches/apply_sclang.sh
+    else
+      echo "Файл apply_sclang.sh не найден!"
+      exit 1
+    fi
 
       - name: Build native tblgen tools (x86_64)
         run: |
