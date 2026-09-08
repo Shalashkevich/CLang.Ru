@@ -16,7 +16,7 @@
 
 ### Структура репозитория
 
-СЯзык/ 
+CLang.Ru/ 
 ├── .github/workflows/build.yml — инструкция сборки на GitHub Actions 
 ├── .github/patches/rus_keywords.inc — русские ключевые слова (маппинг) │ 
 ├── .github/patches/rus_diagnostics.inc — переводы сообщений об ошибках │ 
