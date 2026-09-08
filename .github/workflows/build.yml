@@ -23,9 +23,9 @@ jobs:
 
 - name: Apply СЯзык patch
   run: |
+    chmod +x apply_sclang.sh
     cd llvm-project
-    patch -p1 < ../СЯзык-patch.diff
-
+    ../apply_sclang.sh
 
       - name: Build native tblgen tools (x86_64)
         run: |
