@@ -16,8 +16,7 @@
 
 ### Структура репозитория
 
-CLang.Ru/
-.github/workflows/build.yml — инструкция сборки на GitHub Actions
-.github/apply_sclang.sh — скрипт применения патчей (Python) 
-LICENSE
-README.md
+CLang.Ru/.github/workflows/build.yml — инструкция сборки на GitHub Actions
+CLang.Ru/.github/apply_sclang.sh — скрипт применения патчей (Python) 
+CLang.Ru/LICENSE
+CLang.Ru/README.md
