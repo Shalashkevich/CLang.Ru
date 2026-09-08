@@ -16,9 +16,9 @@
 
 ### Структура репозитория
 
-CLang.Ru/ 
-├── .github/workflows/build.yml — инструкция сборки на GitHub Actions 
-├── .github/patches/rus_keywords.inc — русские ключевые слова (маппинг) │ 
-├── .github/patches/rus_diagnostics.inc — переводы сообщений об ошибках │ 
-└── .github/patches/apply.sh — скрипт применения патчей (Python) 
-└── README.md
+CLang.Ru/.github/workflows/build.yml — инструкция сборки на GitHub Actions 
+CLang.Ru/.github/patches/rus_keywords.inc — русские ключевые слова (маппинг) │ 
+CLang.Ru/.github/patches/rus_diagnostics.inc — переводы сообщений об ошибках │ 
+CLang.Ru/.github/patches/apply.sh — скрипт применения патчей (Python) 
+CLang.Ru/LICENSE
+CLang.Ru/README.md
