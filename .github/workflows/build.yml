@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 360
 
     steps:
       - uses: actions/checkout@v4
@@ -13,25 +13,26 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build python3 git \
-            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y \
+            cmake ninja-build python3 git \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            libc6-dev-arm64-cross binutils-aarch64-linux-gnu
+          # Явная проверка, что всё нашлось
+          which ninja && ninja --version
+          which cmake && cmake --version
+          which aarch64-linux-gnu-gcc
+          which aarch64-linux-gnu-g++
 
       - name: Clone LLVM 23.x
         run: |
           git clone --depth=1 --branch release/23.x \
             https://github.com/llvm/llvm-project.git
 
-      - name: Apply СЯзык patch  # Добавлен правильный отступ
-        run: |  # Добавлен правильный отступ
-          # Проверяем наличие скрипта
-          if [ -f .github/patches/apply_sclang.sh ]; then
-            chmod +x .github/patches/apply_sclang.sh
-            cd llvm-project
-            ../.github/patches/apply_sclang.sh
-          else
-            echo "Файл apply_sclang.sh не найден!"
-            exit 1
-          fi
+      - name: Apply СЯзык patch
+        run: |
+          chmod +x .github/patches/apply_sclang.sh
+          cd llvm-project
+          ../.github/patches/apply_sclang.sh
 
       - name: Build native tblgen tools (x86_64)
         run: |
@@ -40,7 +41,7 @@ jobs:
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_PROJECTS="clang" \
-            -DLLVM_TARGETS_TO_BUILD="" \
+            -DLLVM_TARGETS_TO_BUILD="X86" \
             -DCLANG_ENABLE_ARCMT=OFF \
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
             -DLLVM_INCLUDE_TESTS=OFF \
@@ -50,16 +51,16 @@ jobs:
 
       - name: Cross-compile Clang for aarch64 (static)
         run: |
-          cat > toolchain.cmake << 'EOF'
-          set(CMAKE_SYSTEM_NAME Linux)
-          set(CMAKE_SYSTEM_PROCESSOR aarch64)
-          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
-          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
-          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
-          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-          EOF
+          printf '%s\n' \
+            'set(CMAKE_SYSTEM_NAME Linux)' \
+            'set(CMAKE_SYSTEM_PROCESSOR aarch64)' \
+            'set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)' \
+            'set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)' \
+            'set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)' \
+            'set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)' \
+            'set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)' \
+            'set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)' \
+            > toolchain.cmake
 
           cd llvm-project
           cmake -S llvm -B build-cross \
@@ -67,7 +68,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_PROJECTS="clang" \
-            -DLLVM_TARGETS_TO_BUILD="" \
+            -DLLVM_TARGETS_TO_BUILD="AArch64" \
             -DCLANG_ENABLE_ARCMT=OFF \
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
             -DLLVM_INCLUDE_TESTS=OFF \
@@ -78,6 +79,10 @@ jobs:
             -DLLVM_NATIVE_BUILD=$(pwd)/build-native \
             -DCMAKE_EXE_LINKER_FLAGS="-static"
           ninja -C build-cross clang
+
+      - name: Strip binary
+        run: |
+          aarch64-linux-gnu-strip llvm-project/build-cross/bin/clang
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
