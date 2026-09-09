@@ -8,34 +8,25 @@ TOKEN_KINDS="clang/include/clang/Basic/TokenKinds.def"
 if [ ! -f "$TOKEN_KINDS" ]; then
     echo "ОШИБКА: $TOKEN_KINDS не найден!"
     echo "Текущая директория: $(pwd)"
-    echo "Содержимое clang/include/clang/Basic/:"
     ls -la clang/include/clang/Basic/ 2>/dev/null || echo "директория не найдена"
     exit 1
 fi
 
-# Проверка идемпотентности
 if grep -q 'СЯзык' "$TOKEN_KINDS"; then
     echo "Русские ключевые слова уже добавлены, пропускаем."
     exit 0
 fi
 
-# Ищем строку с while — гибкий поиск, tolerant к пробелам
 LINE=$(grep -n 'KEYWORD(while' "$TOKEN_KINDS" | head -1 | cut -d: -f1)
 
 if [ -z "$LINE" ]; then
     echo "ОШИБКА: не найдена точка вставки в TokenKinds.def"
-    echo "Первые 40 строк файла:"
-    head -40 "$TOKEN_KINDS"
-    echo "---"
-    echo "Строки с KEYWORD:"
     grep -n 'KEYWORD' "$TOKEN_KINDS" | head -20
     exit 1
 fi
 
 echo "Точка вставки: строка $LINE"
-sed -n "${LINE}p" "$TOKEN_KINDS"
 
-# Создаём временный файл с русскими алиасами
 TMPFILE=$(mktemp)
 cat > "$TMPFILE" << 'ENDALIASES'
 
@@ -73,7 +64,6 @@ ALIAS("беззнаковый", unsigned , KEYALL)
 ALIAS("размер", sizeof , KEYALL)
 ENDALIASES
 
-# Вставляем после найденной строки
 sed -i "${LINE}r ${TMPFILE}" "$TOKEN_KINDS"
 rm "$TMPFILE"
 
