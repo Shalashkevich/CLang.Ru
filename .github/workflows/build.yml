@@ -1,4 +1,4 @@
-name: Build СЯзык (aarch64 static)
+name: Build СЯзык (aarch64)
 
 on: [push]
 
@@ -44,7 +44,7 @@ jobs:
             -DLLVM_INCLUDE_BENCHMARKS=OFF
           ninja -C build-native llvm-tblgen clang-tblgen
 
-      - name: Cross-compile Clang for aarch64 (static)
+      - name: Cross-compile Clang for aarch64
         run: |
           REPO_ROOT="$(pwd)"
           cd llvm-project
@@ -69,8 +69,7 @@ jobs:
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
             -DLLVM_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/llvm-tblgen" \
             -DCLANG_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/clang-tblgen" \
-            -DLLVM_NATIVE_BUILD="$REPO_ROOT/llvm-project/build-native" \
-            -DCMAKE_EXE_LINKER_FLAGS="-static"
+            -DLLVM_NATIVE_BUILD="$REPO_ROOT/llvm-project/build-native"
 
           ninja -C build-cross clang
 
@@ -81,3 +80,5 @@ jobs:
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
+          name: sclang-aarch64
+          path: llvm-project/build-cross/bin/clang
