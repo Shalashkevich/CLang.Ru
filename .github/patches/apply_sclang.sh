@@ -1,77 +1,71 @@
-#!/bin/bash
-# СЯзык patch for Clang 23.1
-# Adds Russian keyword aliases via ALIAS macro in TokenKinds.def
-
+#!/usr/bin/env bash
 set -e
 
-DEFFILE="clang/include/clang/Basic/TokenKinds.def"
+echo "=== СЯзык: добавление русских ключевых слов ==="
 
-if [ ! -f "$DEFFILE" ]; then
-    echo "Error: $DEFFILE not found"
+TOKEN_KINDS="clang/include/clang/Basic/TokenKinds.def"
+
+if [ ! -f "$TOKEN_KINDS" ]; then
+    echo "ОШИБКА: $TOKEN_KINDS не найден!"
     exit 1
 fi
 
-if grep -q 'ALIAS("если"' "$DEFFILE"; then
-    echo "Already patched, skipping."
+# Проверка идемпотентности — не патчим дважды
+if grep -q 'СЯзык' "$TOKEN_KINDS"; then
+    echo "Русские ключевые слова уже добавлены, пропускаем."
     exit 0
 fi
 
+# Точка вставки — после KEYWORD(while , KEYALL), конец секции C89 keywords
+LINE=$(grep -n 'KEYWORD(while , KEYALL)' "$TOKEN_KINDS" | head -1 | cut -d: -f1)
+
+if [ -z "$LINE" ]; then
+    echo "ОШИБКА: не найдена точка вставки в TokenKinds.def"
+    exit 1
+fi
+
+# Создаём временный файл с русскими алиасами
 TMPFILE=$(mktemp)
+cat > "$TMPFILE" << 'ENDALIASES'
 
-awk '
-/^#undef ALIAS/ && !done {
-    print "// === СЯзык: Russian keyword aliases ==="
-    print "ALIAS(\"если\", if, KEYALL)"
-    print "ALIAS(\"иначе\", else, KEYALL)"
-    print "ALIAS(\"пока\", while, KEYALL)"
-    print "ALIAS(\"для\", for, KEYALL)"
-    print "ALIAS(\"вернуть\", return, KEYALL)"
-    print "ALIAS(\"переключатель\", switch, KEYALL)"
-    print "ALIAS(\"случай\", case, KEYALL)"
-    print "ALIAS(\"умолчание\", default, KEYALL)"
-    print "ALIAS(\"прервать\", break, KEYALL)"
-    print "ALIAS(\"продолжить\", continue, KEYALL)"
-    print "ALIAS(\"перейти\", goto, KEYALL)"
-    print "ALIAS(\"целое\", int, KEYALL)"
-    print "ALIAS(\"короткое\", short, KEYALL)"
-    print "ALIAS(\"длинное\", long, KEYALL)"
-    print "ALIAS(\"символ\", char, KEYALL)"
-    print "ALIAS(\"пусто\", void, KEYALL)"
-    print "ALIAS(\"плавающее\", float, KEYALL)"
-    print "ALIAS(\"двойное\", double, KEYALL)"
-    print "ALIAS(\"беззнаковое\", unsigned, KEYALL)"
-    print "ALIAS(\"константа\", const, KEYALL)"
-    print "ALIAS(\"изменчивое\", volatile, KEYALL)"
-    print "ALIAS(\"логическое\", bool, KEYCXX)"
-    print "ALIAS(\"авто\", auto, KEYALL)"
-    print "ALIAS(\"размер\", sizeof, KEYALL)"
-    print "ALIAS(\"структура\", struct, KEYALL)"
-    print "ALIAS(\"объединение\", union, KEYALL)"
-    print "ALIAS(\"перечисление\", enum, KEYALL)"
-    print "ALIAS(\"тип\", typedef, KEYALL)"
-    print "ALIAS(\"внешний\", extern, KEYALL)"
-    print "ALIAS(\"статический\", static, KEYALL)"
-    print "ALIAS(\"регистр\", register, KEYALL)"
-    print "ALIAS(\"указатель_нуль\", nullptr, KEYCXX11|KEYC23)"
-    print "ALIAS(\"класс\", class, KEYCXX)"
-    print "ALIAS(\"шаблон\", template, KEYCXX)"
-    print "ALIAS(\"пространство\", namespace, KEYCXX)"
-    print "ALIAS(\"новое\", new, KEYCXX)"
-    print "ALIAS(\"удалить\", delete, KEYCXX)"
-    print "ALIAS(\"попытка\", try, KEYCXX)"
-    print "ALIAS(\"поймать\", catch, KEYCXX)"
-    print "ALIAS(\"бросить\", throw, KEYCXX)"
-    print "ALIAS(\"открытый\", public, KEYCXX)"
-    print "ALIAS(\"закрытый\", private, KEYCXX)"
-    print "ALIAS(\"защищённый\", protected, KEYCXX)"
-    print "ALIAS(\"виртуальный\", virtual, KEYCXX)"
-    print "ALIAS(\"переопределить\", override, KEYCXX11)"
-    print "// === End СЯзык aliases ==="
-    print ""
-    done = 1
-}
-{ print }
-' "$DEFFILE" > "$TMPFILE"
+// СЯзык: Русские ключевые слова (алиасы)
+ALIAS("если", if, KEYALL)
+ALIAS("иначе", else, KEYALL)
+ALIAS("пока", while, KEYALL)
+ALIAS("для", for, KEYALL)
+ALIAS("возврат", return, KEYALL)
+ALIAS("прерывание", break, KEYALL)
+ALIAS("продолжить", continue, KEYALL)
+ALIAS("выбор", switch, KEYALL)
+ALIAS("вариант", case, KEYALL)
+ALIAS("умолчание", default, KEYALL)
+ALIAS("делать", do, KEYALL)
+ALIAS("структура", struct, KEYALL)
+ALIAS("объединение", union, KEYALL)
+ALIAS("перечисление", enum, KEYALL)
+ALIAS("тип", typedef, KEYALL)
+ALIAS("константа", const, KEYALL)
+ALIAS("статический", static, KEYALL)
+ALIAS("внешний", extern, KEYALL)
+ALIAS("регистр", register, KEYALL)
+ALIAS("изменчивый", volatile, KEYALL)
+ALIAS("авто", auto, KEYALL)
+ALIAS("переход", goto, KEYALL)
+ALIAS("пусто", void, KEYALL)
+ALIAS("целое", int, KEYALL)
+ALIAS("символ", char, KEYALL)
+ALIAS("короткий", short, KEYALL)
+ALIAS("длинный", long, KEYALL)
+ALIAS("плавающий", float, KEYALL)
+ALIAS("двойной", double, KEYALL)
+ALIAS("знаковый", signed, KEYALL)
+ALIAS("беззнаковый", unsigned, KEYALL)
+ALIAS("размер", sizeof, KEYALL)
+ENDALIASES
 
-mv "$TMPFILE" "$DEFFILE"
-echo "Patch applied: Russian keywords added to $DEFFILE"
+# Вставляем содержимое файла после найденной строки
+sed -i "${LINE}r ${TMPFILE}" "$TOKEN_KINDS"
+rm "$TMPFILE"
+
+echo "✓ Русские ключевые слова добавлены в TokenKinds.def"
+echo "=== Патч СЯзык применён успешно ==="
