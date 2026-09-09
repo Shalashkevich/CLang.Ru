@@ -1,80 +1,77 @@
-name: Build СЯзык (aarch64 static)
+#!/bin/bash
+# СЯзык patch for Clang 23.1
+# Adds Russian keyword aliases via ALIAS macro in TokenKinds.def
 
-on: [push]
+set -e
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
+DEFFILE="clang/include/clang/Basic/TokenKinds.def"
 
-    steps:
-      - uses: actions/checkout@v4
+if [ ! -f "$DEFFILE" ]; then
+    echo "Error: $DEFFILE not found"
+    exit 1
+fi
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build python3 git \
-            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+if grep -q 'ALIAS("если"' "$DEFFILE"; then
+    echo "Already patched, skipping."
+    exit 0
+fi
 
-      - name: Clone LLVM 23.x
-        run: |
-          git clone --depth=1 --branch release/23.x \
-            https://github.com/llvm/llvm-project.git
+TMPFILE=$(mktemp)
 
-      - name: Apply СЯзык patch  # Исправлен отступ
-        run: |  # Добавлен правильный отступ
-          chmod +x apply_sclang.sh
-          cd llvm-project
-          ../apply_sclang.sh
+awk '
+/^#undef ALIAS/ && !done {
+    print "// === СЯзык: Russian keyword aliases ==="
+    print "ALIAS(\"если\", if, KEYALL)"
+    print "ALIAS(\"иначе\", else, KEYALL)"
+    print "ALIAS(\"пока\", while, KEYALL)"
+    print "ALIAS(\"для\", for, KEYALL)"
+    print "ALIAS(\"вернуть\", return, KEYALL)"
+    print "ALIAS(\"переключатель\", switch, KEYALL)"
+    print "ALIAS(\"случай\", case, KEYALL)"
+    print "ALIAS(\"умолчание\", default, KEYALL)"
+    print "ALIAS(\"прервать\", break, KEYALL)"
+    print "ALIAS(\"продолжить\", continue, KEYALL)"
+    print "ALIAS(\"перейти\", goto, KEYALL)"
+    print "ALIAS(\"целое\", int, KEYALL)"
+    print "ALIAS(\"короткое\", short, KEYALL)"
+    print "ALIAS(\"длинное\", long, KEYALL)"
+    print "ALIAS(\"символ\", char, KEYALL)"
+    print "ALIAS(\"пусто\", void, KEYALL)"
+    print "ALIAS(\"плавающее\", float, KEYALL)"
+    print "ALIAS(\"двойное\", double, KEYALL)"
+    print "ALIAS(\"беззнаковое\", unsigned, KEYALL)"
+    print "ALIAS(\"константа\", const, KEYALL)"
+    print "ALIAS(\"изменчивое\", volatile, KEYALL)"
+    print "ALIAS(\"логическое\", bool, KEYCXX)"
+    print "ALIAS(\"авто\", auto, KEYALL)"
+    print "ALIAS(\"размер\", sizeof, KEYALL)"
+    print "ALIAS(\"структура\", struct, KEYALL)"
+    print "ALIAS(\"объединение\", union, KEYALL)"
+    print "ALIAS(\"перечисление\", enum, KEYALL)"
+    print "ALIAS(\"тип\", typedef, KEYALL)"
+    print "ALIAS(\"внешний\", extern, KEYALL)"
+    print "ALIAS(\"статический\", static, KEYALL)"
+    print "ALIAS(\"регистр\", register, KEYALL)"
+    print "ALIAS(\"указатель_нуль\", nullptr, KEYCXX11|KEYC23)"
+    print "ALIAS(\"класс\", class, KEYCXX)"
+    print "ALIAS(\"шаблон\", template, KEYCXX)"
+    print "ALIAS(\"пространство\", namespace, KEYCXX)"
+    print "ALIAS(\"новое\", new, KEYCXX)"
+    print "ALIAS(\"удалить\", delete, KEYCXX)"
+    print "ALIAS(\"попытка\", try, KEYCXX)"
+    print "ALIAS(\"поймать\", catch, KEYCXX)"
+    print "ALIAS(\"бросить\", throw, KEYCXX)"
+    print "ALIAS(\"открытый\", public, KEYCXX)"
+    print "ALIAS(\"закрытый\", private, KEYCXX)"
+    print "ALIAS(\"защищённый\", protected, KEYCXX)"
+    print "ALIAS(\"виртуальный\", virtual, KEYCXX)"
+    print "ALIAS(\"переопределить\", override, KEYCXX11)"
+    print "// === End СЯзык aliases ==="
+    print ""
+    done = 1
+}
+{ print }
+' "$DEFFILE" > "$TMPFILE"
 
-      - name: Build native tblgen tools (x86_64)
-        run: |
-          cd llvm-project
-          cmake -S llvm -B build-native \
-            -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLLVM_ENABLE_PROJECTS="clang" \
-            -DLLVM_TARGETS_TO_BUILD="" \
-            -DCLANG_ENABLE_ARCMT=OFF \
-            -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
-            -DLLVM_INCLUDE_TESTS=OFF \
-            -DLLVM_INCLUDE_EXAMPLES=OFF \
-            -DLLVM_INCLUDE_BENCHMARKS=OFF
-          ninja -C build-native llvm-tblgen clang-tblgen
-
-      - name: Cross-compile Clang for aarch64 (static)
-        run: |
-          cat > toolchain.cmake << 'EOF'
-          set(CMAKE_SYSTEM_NAME Linux)
-          set(CMAKE_SYSTEM_PROCESSOR aarch64)
-          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
-          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
-          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
-          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-          EOF
-
-          cd llvm-project
-          cmake -S llvm -B build-cross \
-            -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLLVM_ENABLE_PROJECTS="clang" \
-            -DLLVM_TARGETS_TO_BUILD="" \
-            -DCLANG_ENABLE_ARCMT=OFF \
-            -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
-            -DLLVM_INCLUDE_TESTS=OFF \
-            -DLLVM_INCLUDE_EXAMPLES=OFF \
-            -DLLVM_INCLUDE_BENCHMARKS=OFF \
-            -DLLVM_TABLEGEN=$(pwd)/build-native/bin/llvm-tblgen \
-            -DCLANG_TABLEGEN=$(pwd)/build-native/bin/clang-tblgen \
-            -DLLVM_NATIVE_BUILD=$(pwd)/build-native \
-            -DCMAKE_EXE_LINKER_FLAGS="-static"
-          ninja -C build-cross clang
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: sclang-aarch64
-          path: llvm-project/build-cross/bin/clang
+mv "$TMPFILE" "$DEFFILE"
+echo "Patch applied: Russian keywords added to $DEFFILE"
