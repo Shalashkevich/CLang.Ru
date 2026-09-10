@@ -51,34 +51,4 @@ jobs:
 
           cmake -S llvm -B build-cross \
             -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-            -DLLVM_ENABLE_PROJECTS="clang" \
-            -DLLVM_TARGETS_TO_BUILD="AArch64" \
-            -DCLANG_ENABLE_ARCMT=OFF \
-            -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
-            -DLLVM_INCLUDE_TESTS=OFF \
-            -DLLVM_INCLUDE_EXAMPLES=OFF \
-            -DLLVM_INCLUDE_BENCHMARKS=OFF \
-            -DLLVM_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/llvm-tblgen" \
-            -DCLANG_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/clang-tblgen" \
-            -DLLVM_NATIVE_BUILD="$REPO_ROOT/llvm-project/build-native"
-
-          ninja -C build-cross clang
-
-      - name: Strip binary
-        run: |
-          aarch64-linux-gnu-strip llvm-project/build-cross/bin/clang
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: sclang-aarch64
-          path: llvm-project/build-cross/bin/clang
+            -DCMAKE_BUILD_TYPE=Release
