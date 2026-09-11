@@ -1,4 +1,4 @@
-name: Build СЯзык (aarch64)
+name: Build СЯзык (aarch64 Android)
 
 on: [push]
 
@@ -13,10 +13,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            cmake ninja-build python3 git \
-            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libc6-dev-arm64-cross binutils-aarch64-linux-gnu
+          sudo apt-get install -y cmake ninja-build python3 git
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          add-to-path: false
 
       - name: Clone LLVM 23.x
         run: |
@@ -25,9 +29,9 @@ jobs:
 
       - name: Apply СЯзык patch
         run: |
-          chmod +x .github/patches/apply_sclang.sh
+          chmod +x .github/patches/apply_slang.sh
           cd llvm-project
-          ../.github/patches/apply_sclang.sh
+          ../.github/patches/apply_slang.sh
 
       - name: Build native tblgen tools (x86_64)
         run: |
@@ -44,7 +48,9 @@ jobs:
             -DLLVM_INCLUDE_BENCHMARKS=OFF
           ninja -C build-native llvm-tblgen clang-tblgen
 
-      - name: Cross-compile Clang for aarch64
+      - name: Cross-compile Clang for Android aarch64
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           REPO_ROOT="$(pwd)"
           cd llvm-project
@@ -52,35 +58,46 @@ jobs:
           cmake -S llvm -B build-cross \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_SYSTEM_NAME=Linux \
-            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-            -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-21 \
+            -DANDROID_STL=c++_static \
+            -DANDROID_ALLOW_UNDEFINED_SYMBOLS=ON \
             -DLLVM_ENABLE_PROJECTS="clang" \
             -DLLVM_TARGETS_TO_BUILD="AArch64" \
+            -DLLVM_HOST_TRIPLE=aarch64-linux-android \
             -DCLANG_ENABLE_ARCMT=OFF \
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
             -DLLVM_INCLUDE_TESTS=OFF \
             -DLLVM_INCLUDE_EXAMPLES=OFF \
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_ENABLE_LIBXML2=OFF \
+            -DLLVM_ENABLE_TERMINFO=OFF \
             -DLLVM_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/llvm-tblgen" \
             -DCLANG_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/clang-tblgen" \
             -DLLVM_NATIVE_BUILD="$REPO_ROOT/llvm-project/build-native" \
-            -DCMAKE_CXX_FLAGS="-ftls-model=global-dynamic" \
-            -DCMAKE_C_FLAGS="-ftls-model=global-dynamic"
+            -DCMAKE_EXE_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
+            -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++'
 
           ninja -C build-cross clang
 
       - name: Strip binary
         run: |
-          aarch64-linux-gnu-strip llvm-project/build-cross/bin/clang
+          ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
+            llvm-project/build-cross/bin/clang
+
+      - name: Build termux-elf-cleaner and fix TLS alignment
+        run: |
+          git clone --depth=1 --branch v3.0.1 \
+            https://github.com/termux/termux-elf-cleaner.git
+          cd termux-elf-cleaner
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ./build/termux-elf-cleaner ../llvm-project/build-cross/bin/clang
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: sclang-aarch64
+          name: sclang-aarch64-android
           path: llvm-project/build-cross/bin/clang
