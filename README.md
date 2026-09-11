@@ -14,9 +14,9 @@
 Сборка происходит автоматически на GitHub Actions при пуше в репозиторий.
 Бинарник компилируется для архитектуры **aarch64** (Android) со статической линковкой.
 
-### Структура репозитория
+### Структура репозитория CLang.Ru
 
-CLang.Ru/.github/workflows/build.yml — инструкция сборки на GitHub Actions
-CLang.Ru/.github/apply_sclang.sh — скрипт применения патчей (Python) 
-CLang.Ru/LICENSE
-CLang.Ru/README.md
+/.github/workflows/Build.yml — инструкция сборки на GitHub Actions
+/.github/ApplyPatch.sh — скрипт применения патчей (Python) 
+/LICENSE — лицензия
+/README.md — этот файл
