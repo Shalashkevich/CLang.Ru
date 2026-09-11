@@ -8,19 +8,19 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build python3 git
 
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r27c
-          add-to-path: false
+      - name: Download and setup Android NDK
+        run: |
+          NDK_VERSION=r27c
+          wget -q https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip
+          unzip -q android-ndk-${NDK_VERSION}-linux.zip
+          echo "ANDROID_NDK_HOME=$(pwd)/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
 
       - name: Clone LLVM 23.x
         run: |
@@ -50,7 +50,7 @@ jobs:
 
       - name: Cross-compile Clang for Android aarch64
         env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         run: |
           REPO_ROOT="$(pwd)"
           cd llvm-project
@@ -84,7 +84,7 @@ jobs:
 
       - name: Strip binary
         run: |
-          ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
+          ${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
             llvm-project/build-cross/bin/clang
 
       - name: Build termux-elf-cleaner and fix TLS alignment
@@ -97,7 +97,7 @@ jobs:
           ./build/termux-elf-cleaner ../llvm-project/build-cross/bin/clang
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sclang-aarch64-android
           path: llvm-project/build-cross/bin/clang
