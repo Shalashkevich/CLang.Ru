@@ -1,4 +1,4 @@
-name: Build СЯзык (aarch64 Android)
+name: Build СЯзык Full (aarch64 Android)
 
 on: [push]
 
@@ -48,9 +48,7 @@ jobs:
             -DLLVM_INCLUDE_BENCHMARKS=OFF
           ninja -C build-native llvm-tblgen clang-tblgen
 
-      - name: Cross-compile Clang for Android aarch64
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+      - name: Cross-compile full Clang toolchain for Android aarch64
         run: |
           REPO_ROOT="$(pwd)"
           cd llvm-project
@@ -63,41 +61,82 @@ jobs:
             -DANDROID_PLATFORM=android-21 \
             -DANDROID_STL=c++_static \
             -DANDROID_ALLOW_UNDEFINED_SYMBOLS=ON \
-            -DLLVM_ENABLE_PROJECTS="clang" \
+            -DCMAKE_INSTALL_PREFIX="$REPO_ROOT/sclang-install" \
+            \
+            -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt;libcxx;libcxxabi;libunwind;clang-tools-extra" \
             -DLLVM_TARGETS_TO_BUILD="AArch64" \
             -DLLVM_HOST_TRIPLE=aarch64-linux-android \
+            \
             -DCLANG_ENABLE_ARCMT=OFF \
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
             -DLLVM_INCLUDE_TESTS=OFF \
             -DLLVM_INCLUDE_EXAMPLES=OFF \
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_BUILD_TOOLS=OFF \
+            -DLLVM_BUILD_UTILS=OFF \
             -DLLVM_ENABLE_LIBXML2=OFF \
             -DLLVM_ENABLE_TERMINFO=OFF \
+            -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
+            \
             -DLLVM_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/llvm-tblgen" \
             -DCLANG_TABLEGEN="$REPO_ROOT/llvm-project/build-native/bin/clang-tblgen" \
             -DLLVM_NATIVE_BUILD="$REPO_ROOT/llvm-project/build-native" \
+            \
             -DCMAKE_EXE_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
             -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
-            -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++'
+            -DCROSS_TOOLCHAIN_FLAGS_NATIVE='-DCMAKE_C_COMPILER=cc;-DCMAKE_CXX_COMPILER=c++' \
+            \
+            -DCOMPILER_RT_BUILD_BUILTINS=ON \
+            -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
+            -DCOMPILER_RT_BUILD_PROFILE=ON \
+            -DCOMPILER_RT_BUILD_XRAY=OFF \
+            -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
+            -DCOMPILER_RT_BUILD_MEMPROF=OFF \
+            -DCOMPILER_RT_BUILD_ORC=OFF \
+            \
+            -DLIBCXX_ENABLE_SHARED=OFF \
+            -DLIBCXX_ENABLE_STATIC=ON \
+            -DLIBCXX_CXX_ABI=libcxxabi \
+            -DLIBCXXABI_ENABLE_SHARED=OFF \
+            -DLIBCXXABI_ENABLE_STATIC=ON \
+            -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+            -DLIBUNWIND_ENABLE_SHARED=OFF \
+            -DLIBUNWIND_ENABLE_STATIC=ON
 
-          ninja -C build-cross clang
+          ninja -C build-cross
+          ninja -C build-cross install
 
-      - name: Strip binary
+      - name: Strip all binaries
         run: |
-          ${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
-            llvm-project/build-cross/bin/clang
+          STRIP="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+          find sclang-install/bin -type f | while read -r f; do
+            if file "$f" | grep -q "ELF"; then
+              "$STRIP" "$f"
+              echo "Stripped: $f"
+            fi
+          done
 
-      - name: Build termux-elf-cleaner and fix TLS alignment
+      - name: Build termux-elf-cleaner and clean all binaries
         run: |
           git clone --depth=1 --branch v3.0.1 \
             https://github.com/termux/termux-elf-cleaner.git
           cd termux-elf-cleaner
           cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
           cmake --build build
-          ./build/termux-elf-cleaner ../llvm-project/build-cross/bin/clang
+          find ../sclang-install/bin -type f | while read -r f; do
+            if file "$f" | grep -q "ELF"; then
+              ./build/termux-elf-cleaner "$f"
+              echo "Cleaned: $f"
+            fi
+          done
 
-      - name: Upload binary
+      - name: Create tarball
+        run: |
+          tar -czf sclang-full-aarch64-android.tar.gz sclang-install/
+
+      - name: Upload full toolchain
         uses: actions/upload-artifact@v5
         with:
-          name: sclang-aarch64-android
-          path: llvm-project/build-cross/bin/clang
+          name: sclang-full-aarch64-android
+          path: sclang-full-aarch64-android.tar.gz
