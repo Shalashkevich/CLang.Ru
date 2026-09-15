@@ -66,9 +66,9 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$REPO_ROOT/sclang-install" \
             \
             -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt" \
-            -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
             -DLLVM_TARGETS_TO_BUILD="AArch64" \
             -DLLVM_HOST_TRIPLE=aarch64-linux-android \
+            -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-android21 \
             \
             -DCLANG_ENABLE_ARCMT=OFF \
             -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
@@ -96,18 +96,9 @@ jobs:
             -DCOMPILER_RT_BUILD_XRAY=OFF \
             -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
             -DCOMPILER_RT_BUILD_MEMPROF=OFF \
-            -DCOMPILER_RT_BUILD_ORC=OFF \
-            \
-            -DRUNTIMES_LIBCXX_ENABLE_SHARED=OFF \
-            -DRUNTIMES_LIBCXX_ENABLE_STATIC=ON \
-            -DRUNTIMES_LIBCXX_CXX_ABI=libcxxabi \
-            -DRUNTIMES_LIBCXXABI_ENABLE_SHARED=OFF \
-            -DRUNTIMES_LIBCXXABI_ENABLE_STATIC=ON \
-            -DRUNTIMES_LIBCXXABI_USE_LLVM_UNWINDER=ON \
-            -DRUNTIMES_LIBUNWIND_ENABLE_SHARED=OFF \
-            -DRUNTIMES_LIBUNWIND_ENABLE_STATIC=ON
+            -DCOMPILER_RT_BUILD_ORC=OFF
 
-          ninja -C build-cross -k 0
+          ninja -C build-cross
           ninja -C build-cross install
 
 
