@@ -65,7 +65,7 @@ jobs:
             -DANDROID_ALLOW_UNDEFINED_SYMBOLS=ON \
             -DCMAKE_INSTALL_PREFIX="$REPO_ROOT/sclang-install" \
             \
-            -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt;clang-tools-extra" \
+            -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt" \
             -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
             -DLLVM_TARGETS_TO_BUILD="AArch64" \
             -DLLVM_HOST_TRIPLE=aarch64-linux-android \
@@ -107,7 +107,7 @@ jobs:
             -DRUNTIMES_LIBUNWIND_ENABLE_SHARED=OFF \
             -DRUNTIMES_LIBUNWIND_ENABLE_STATIC=ON
 
-          ninja -C build-cross
+          ninja -C build-cross -k 0
           ninja -C build-cross install
 
 
