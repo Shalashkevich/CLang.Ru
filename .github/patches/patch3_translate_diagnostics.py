@@ -559,9 +559,9 @@ def protect_specifiers(text):
     text = re.sub(r'%([sd])', lambda m: f'\x00SIM{m.group(1)}\x00', text)
     text = re.sub(r'%(q|ord|adj|sub|obj|diff|fixithint|fpeditkind)', lambda m: f'\x00SPL{m.group(1)}\x00', text)
     
-    # Нестандартные спецификаторы Clang: %enum_select<...>{...}, %objc_classname, и т.п.
-    # Защищаем любые %word_select, %word_set, %word_name и т.д.
-    text = re.sub(r'%(\w+?)(_[a-z]+)', lambda m: f'\x00CUS{m.group(0)}\x00', text)
+    # Нестандартные спецификаторы Clang: %enum_select, %sub_type, и т.п.
+    # Правильная регулярка: % + буквы + (_ + буквы)+
+    text = re.sub(r'%[a-zA-Z]+(?:_[a-zA-Z]+)+', lambda m: f'\x00CUS{m.group(0)}\x00', text)
     
     return text
 
@@ -573,8 +573,10 @@ def restore_specifiers(text):
     text = re.sub(r'\x00DIF(\d+)\x00', r'%diff{...}\1', text)
     text = re.sub(r'\x00SIM([sd])\x00', r'%\1', text)
     text = re.sub(r'\x00SPL(\w+)\x00', r'%\1', text)
-    text = re.sub(r'\x00CUS(%\S+?)\x00', r'\1', text)
+    # Восстанавливаем нестандартные спецификаторы (включая знак %)
+    text = re.sub(r'\x00CUS(%[a-zA-Z]+(?:_[a-zA-Z]+)+)\x00', r'\1', text)
     return text
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Применение перевода к одному сообщению
