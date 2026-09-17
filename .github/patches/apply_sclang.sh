@@ -3,8 +3,6 @@ set -e
 
 echo "=== СЯзык: добавление русского перевода в CLang ==="
 
-cd llvm-project
-
 # 1. Ключевые слова
 bash ../.github/patches/patch1_russian_keywords.sh
 
