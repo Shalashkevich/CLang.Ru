@@ -1,4 +1,4 @@
-name: Build СЯзык Full (aarch64, Android)
+name: Build СЯзык Full (aarch64 Android)
 
 on: [push]
 
