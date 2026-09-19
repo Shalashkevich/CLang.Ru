@@ -29,9 +29,9 @@ jobs:
 
       - name: Apply СЯзык patch
         run: |
-          chmod +x .github/patches/apply_sclang.sh
+          chmod +x .github/patches/apply.sh
           cd llvm-project
-          ../.github/patches/apply_sclang.sh
+          ../.github/patches/apply.sh
 
       - name: Build native tblgen tools (x86_64)
         run: |
