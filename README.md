@@ -16,9 +16,9 @@
 
 ### Структура репозитория CLang.Ru
 
-/.github/workflows/Build.yml — инструкция сборки на GitHub Actions
+/.github/workflows/build.yml — инструкция сборки на GitHub Actions
 
-/.github/ApplyPatch.sh — скрипт применения патчей (Python)
+/.github/apply.patch.sh — скрипт применения патчей (Python)
 
 /LICENSE — лицензия
 
