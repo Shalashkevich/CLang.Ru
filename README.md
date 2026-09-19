@@ -18,7 +18,7 @@
 
 /.github/workflows/build.yml — инструкция сборки на GitHub Actions
 
-/.github/apply.patch.sh — скрипт применения патчей (Python)
+/.github/patches/apply.sh — скрипт применения патчей (Python)
 
 /LICENSE — лицензия
 
